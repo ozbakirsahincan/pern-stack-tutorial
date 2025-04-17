@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { sql } from './config/db.js';
+import { aj } from './lib/arcjet.js'
 
 // Import routes
 const app = express();
@@ -21,6 +22,43 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(async (req, res, next) => {
+    try {
+        const decision = await aj.protect(req, {
+            requested: 1 // her bir istek için 1 token harcayacak
+        });
+        if (decision.isDenied()) {
+            if (decision.reason.isRateLimit()) {
+                res.status(429).json({
+                    error: 'Maximum sayıda istek yapıldı. Lütfen bekleyin.'
+                });
+            } else if (decision.reason.isBot()) {
+                res.status(403).json({
+                    error: 'Botlar bu isteği yapamaz.'
+                });
+            } else {
+                res.status(403).json({
+                    error: 'Yasaklandınız . Bu isteği yapamazsınız.'
+                });
+            }
+            return;
+        }
+        // Bot tekrar denerse
+        if (decision.results.some(result => result.reason.isBot() &&result.reason.isSpoofed())) {
+            res.status(403).json({
+                error: 'Botun tekrar denemesi tespit edildi'
+            });
+            return;
+        }
+        
+        next();
+
+    }
+    catch (error) {
+
+    }
+
+});
 
 // Routes
 import productRoutes from './routes/productRoutes.js';

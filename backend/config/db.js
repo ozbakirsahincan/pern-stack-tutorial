@@ -5,10 +5,10 @@ dotenv.config();
 
 
 const {PGHOST , PGUSER, PGPASSWORD, PGDATABASE,} = process.env;
-const connectionString = `postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}`;
 
 
-export const sql = postgres(connectionString, {
+
+export const sql = postgres( {
     host: PGHOST,
     user: PGUSER,
     password: PGPASSWORD,
